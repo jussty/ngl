@@ -614,7 +614,7 @@ export default class Viewer {
 
     const mesh = buffer.getMesh()
     if (instance) {
-      mesh.applyMatrix(instance.matrix)
+      mesh.applyMatrix4(instance.matrix)
     }
     setUserData(mesh)
     buffer.group.add(mesh)
