@@ -210,6 +210,8 @@ export { UIStageParameters } from './ui/parameters'
 
 import Version from './version'
 
+import ThreeJSViewer from "./viewer/threejs-viewer";
+
 if (!(window as any).Promise) {
   (window as any).Promise = _Promise
 }
@@ -267,5 +269,7 @@ export {
 
   MouseActions,
   KeyActions,
-  PickingProxy
+  PickingProxy,
+
+  ThreeJSViewer
 }

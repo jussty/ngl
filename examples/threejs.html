@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>three.js webgl - NGL ThreeJSViewer demonstration</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <link type="text/css" rel="stylesheet" href="http://threejs.org/files/main.css">
+    <style>
+        body {
+            background-color: #bfe3dd;
+            color: #000;
+        }
+
+        a {
+            color: #2983ff;
+        }
+    </style>
+</head>
+
+<body>
+
+<div id="container"></div>
+
+
+<script type="module">
+    import * as THREE from '../node_modules/three/build/three.module.js'
+
+    import Stats from '../node_modules/three/examples/jsm/libs/stats.module.js';
+    import { OrbitControls } from '../node_modules/three/examples/jsm/controls/OrbitControls.js';
+
+    import { ThreeJSViewer, autoLoad } from '../build/js/ngl.esm.js'
+
+    var scene, camera, pointLight, stats;
+    var renderer, controls;
+
+    var container = document.getElementById( 'container' );
+
+    stats = new Stats();
+    container.appendChild( stats.dom );
+
+    renderer = new THREE.WebGLRenderer( { antialias: true } );
+    renderer.setPixelRatio( window.devicePixelRatio );
+    renderer.setSize( window.innerWidth, window.innerHeight );
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    container.appendChild( renderer.domElement );
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color( 0xbfe3dd );
+
+    camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight);
+    camera.position.z = -80;
+    camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+    controls = new OrbitControls( camera, renderer.domElement );
+    controls.target.set( 0, 0.5, 0 );
+    controls.enablePan = false;
+
+    scene.add( new THREE.AmbientLight( 0x404040 ) );
+
+    pointLight = new THREE.PointLight( 0xffffff, 1 );
+    pointLight.position.copy( camera.position );
+    scene.add( pointLight );
+
+    var geometry = new THREE.BoxBufferGeometry( 0.5, 0.8, 0.5 );
+    var material = new THREE.MeshStandardMaterial( {
+        color: 0x444444,
+        roughness: 1.0,
+        metalness: 0.0
+    } );
+    var table = new THREE.Mesh( geometry, material );
+    table.position.y = 0.35;
+    table.position.z = 0.85;
+    scene.add( table );
+
+    // 1. Load with static method into new group
+    ThreeJSViewer.load(renderer, camera, scene, "http://files.rcsb.org/ligands/view/ADN_ideal.sdf");
+
+    // 2. Split loading and rendering (static method, into new group)
+    autoLoad("rcsb://1crn.mmtf").then(structure => {
+        ThreeJSViewer.new(renderer, camera, scene, structure);
+    });
+
+    // 3. Initialize group and viewer by hand
+    var group = new THREE.Group();
+    scene.add(group);
+    group.scale.set(0.1, 0.1, 0.1);
+    group.position.set(-20, 0, 0);
+
+    var viewer = new ThreeJSViewer(renderer, camera, scene, group);
+
+    autoLoad("rcsb://3sn6.mmtf").then(structure => {
+        viewer.addRepresentation(structure);
+
+        // Also, custom parameters for the representation can be set with any method
+        /*viewer.addRepresentation(structure, 'cartoon', {
+            colorScheme: 'chainname',
+            colorScale: 'RdYlBu',
+            colorReverse: false,
+            radiusScale: 0.7,
+            aspectRatio: 5,
+            quality: 'auto'
+        });*/
+    });
+
+    animate();
+
+    window.onresize = function () {
+
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+
+        renderer.setSize( window.innerWidth, window.innerHeight );
+
+    };
+
+
+    function animate() {
+
+        requestAnimationFrame( animate );
+
+        controls.update();
+
+        stats.update();
+
+        renderer.render( scene, camera );
+    }
+
+
+</script>
+
+</body>
+
+</html>
