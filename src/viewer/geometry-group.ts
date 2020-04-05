@@ -23,6 +23,7 @@ class GeometryGroup {
 
     this.geometryList.forEach(geo => {
       if (!geo.boundingBox) geo.computeBoundingBox()
+      if (!geo.boundingBox) return
       this.boundingBox.union(geo.boundingBox)
     })
   }

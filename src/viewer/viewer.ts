@@ -674,6 +674,7 @@ export default class Viewer {
     function updateGeometry (geometry: BufferGeometry, matrix?: Matrix4, instanceMatrix?: Matrix4) {
       if (!geometry.boundingBox) {
         geometry.computeBoundingBox()
+        if (!geometry.boundingBox) return
       }
 
       const geoBoundingBox = geometry.boundingBox.clone()
