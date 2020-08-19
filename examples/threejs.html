@@ -21,14 +21,26 @@
 
 <div id="container"></div>
 
+<script src="../node_modules/three/build/three.js"></script>
+<script src="../node_modules/signals/dist/signals.js"></script>
+<script src="../node_modules/chroma-js/chroma.js"></script>
+<script>
+    // Define dependency globals using the names expected by NGL UMD module before loading it
+    var three = THREE;
+    var signalsWrapper = signals;
+</script>
+
+<script src="../build/js/ngl.umd.js"></script>
 
 <script type="module">
-    import * as THREE from '../node_modules/three/build/three.module.js'
+    //import * as THREE from '../node_modules/three/build/three.module.js'
 
     import Stats from '../node_modules/three/examples/jsm/libs/stats.module.js';
     import { OrbitControls } from '../node_modules/three/examples/jsm/controls/OrbitControls.js';
 
-    import { ThreeJSViewer, autoLoad } from '../build/js/ngl.esm.js'
+    //import { ThreeJSViewer, autoLoad } from '../build/js/ngl.esm.js'
+    const ThreeJSViewer = NGL.ThreeJSViewer;
+    const autoLoad = NGL.autoLoad;
 
     var scene, camera, pointLight, stats;
     var renderer, controls;
