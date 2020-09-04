@@ -37,7 +37,6 @@ import Structure from "../structure/structure";
 import Volume from "../surface/volume";
 import {RepresentationParameters} from "../representation/representation";
 import {autoLoad, LoaderInput} from "../loader/loader-utils";
-import {testTextureSupport} from "./gl-utils";
 
 
 const tmpMatrix = new Matrix4()
@@ -156,18 +155,23 @@ export default class ThreeJSViewer {
         }
         this.modelGroup = group;
 
-        // I am not sure if all of this is necessary - for me it works also without
-        const gl = this.renderer.getContext();
+        // For WebGL1, extensions must be explicitly enabled.
+        // The following are builtin to WebGL2 (and don't appear as
+        // extensions)
+        // EXT_frag_depth, OES_element_index_uint, OES_texture_float
+        // OES_texture_half_float
 
-        setExtensionFragDepth(this.renderer.extensions.get('EXT_frag_depth'));
-        this.renderer.extensions.get('OES_element_index_uint');
+        // The WEBGL_color_buffer_float extension is replaced by
+        // EXT_color_buffer_float
 
-        setSupportsReadPixelsFloat(
-            (this.renderer.extensions.get('OES_texture_float') &&
-                this.renderer.extensions.get('WEBGL_color_buffer_float')) ||
-            (this.renderer.extensions.get('OES_texture_float') &&
-                testTextureSupport(gl.FLOAT))
-        )
+        if (this.renderer.capabilities.isWebGL2) {
+            setExtensionFragDepth(true)
+            setSupportsReadPixelsFloat(
+                this.renderer.extensions.get('EXT_color_buffer_float')
+            )
+        } else {
+            Log.error('Only WebGL2 contexts are supported')
+        }
     }
 
     addRepresentation (data: Structure|Volume|Surface, type?: string, params?: Partial<RepresentationParameters>) {
