@@ -111,8 +111,8 @@
         renderer = new THREE.WebGLRenderer( { antialias: true } );
         renderer.setPixelRatio( window.devicePixelRatio );
         renderer.setSize( window.innerWidth, window.innerHeight );
-        //renderer.outputEncoding = THREE.sRGBEncoding;
-        renderer.outputEncoding = THREE.LinearEncoding; // Looks like NGL default
+        renderer.outputEncoding = THREE.sRGBEncoding; // Better lighting conditions e.g. for controllers
+        //renderer.outputEncoding = THREE.LinearEncoding; // Looks like NGL default
         renderer.shadowMap.enabled = true;
         renderer.xr.enabled = true;
         container.appendChild( renderer.domElement );
