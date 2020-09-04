@@ -121,14 +121,14 @@
 
         group = new THREE.Group();
         group.scale.set(0.01, 0.01, 0.01);
-        group.position.set(0, 0.5, -1);
+        group.position.set(0, 0.8, -1);
         scene.add( group );
 
         viewer = new ThreeJSViewer(renderer, camera, scene, group);
 
-        /*autoLoad("rcsb://3sn6").then(structure => {
+        autoLoad("rcsb://3sn6").then(structure => {
             viewer.addRepresentation(structure);
-        });*/
+        });
 
         // http://nglviewer.org/ngl/gallery/#representation/contact
         /*autoLoad("rcsb://1crn").then(structure => {
@@ -142,10 +142,10 @@
                 multipleBond: "symmetric",
                 sele: "not water"
             })
-        });*/
+        });/*
 
         // http://nglviewer.org/ngl/gallery/#color/resname
-        autoLoad("rcsb://1d66").then(structure => {
+        /*autoLoad("rcsb://1d66").then(structure => {
             viewer.addRepresentation(structure, 'cartoon', {
                 color: "resname"
             })
@@ -156,7 +156,7 @@
                 color: "resname",
                 visible: false
             })
-        });
+        });*/
 
         document.body.appendChild( VRButton.createButton( renderer ) );
 
@@ -165,11 +165,15 @@
         controller1 = renderer.xr.getController( 0 );
         controller1.addEventListener( 'selectstart', onSelectStart );
         controller1.addEventListener( 'selectend', onSelectEnd );
+        controller1.addEventListener( 'squeezestart', onSqueezeStart );
+        controller1.addEventListener( 'squeezeend', onSqueezeEnd );
         scene.add( controller1 );
 
         controller2 = renderer.xr.getController( 1 );
         controller2.addEventListener( 'selectstart', onSelectStart );
         controller2.addEventListener( 'selectend', onSelectEnd );
+        controller2.addEventListener( 'squeezestart', onSqueezeStart );
+        controller2.addEventListener( 'squeezeend', onSqueezeEnd );
         scene.add( controller2 );
 
         var controllerModelFactory = new XRControllerModelFactory();
@@ -217,6 +221,19 @@
     function onSelectStart( event ) {
 
         var controller = event.target;
+        controller.attach( group );
+
+    }
+
+    function onSelectEnd( event ) {
+
+        scene.attach(group);
+
+    }
+
+    function onSqueezeStart( event ) {
+
+        var controller = event.target;
 
         var intersections = getIntersections( controller );
 
@@ -224,9 +241,7 @@
 
             var intersection = intersections[ 0 ];
 
-            //var object = intersection.object;
-            var object = group;
-            //object.material.emissive.b = 1;
+            var object = intersection.object;
             controller.attach( object );
 
             controller.userData.selected = object;
@@ -235,16 +250,14 @@
 
     }
 
-    function onSelectEnd( event ) {
+    function onSqueezeEnd( event ) {
 
         var controller = event.target;
 
         if ( controller.userData.selected !== undefined ) {
 
-            //var object = controller.userData.selected;
-            //object.material.emissive.b = 0;
-            //group.attach( object );
-            scene.attach(group);
+            var object = controller.userData.selected;
+            group.attach( object );
 
             controller.userData.selected = undefined;
 
