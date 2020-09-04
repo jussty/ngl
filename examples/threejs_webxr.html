@@ -121,14 +121,14 @@
 
         group = new THREE.Group();
         group.scale.set(0.01, 0.01, 0.01);
-        group.position.set(0, 0.3, -1);
+        group.position.set(0, 0.5, -1);
         scene.add( group );
 
         viewer = new ThreeJSViewer(renderer, camera, scene, group);
 
-        autoLoad("rcsb://3sn6").then(structure => {
+        /*autoLoad("rcsb://3sn6").then(structure => {
             viewer.addRepresentation(structure);
-        });
+        });*/
 
         // http://nglviewer.org/ngl/gallery/#representation/contact
         /*autoLoad("rcsb://1crn").then(structure => {
@@ -145,7 +145,7 @@
         });*/
 
         // http://nglviewer.org/ngl/gallery/#color/resname
-        /*autoLoad("rcsb://1d66").then(structure => {
+        autoLoad("rcsb://1d66").then(structure => {
             viewer.addRepresentation(structure, 'cartoon', {
                 color: "resname"
             })
@@ -156,7 +156,7 @@
                 color: "resname",
                 visible: false
             })
-        });*/
+        });
 
         document.body.appendChild( VRButton.createButton( renderer ) );
 
@@ -224,7 +224,8 @@
 
             var intersection = intersections[ 0 ];
 
-            var object = intersection.object;
+            //var object = intersection.object;
+            var object = group;
             //object.material.emissive.b = 1;
             controller.attach( object );
 
@@ -240,9 +241,10 @@
 
         if ( controller.userData.selected !== undefined ) {
 
-            var object = controller.userData.selected;
+            //var object = controller.userData.selected;
             //object.material.emissive.b = 0;
-            group.attach( object );
+            //group.attach( object );
+            scene.attach(group);
 
             controller.userData.selected = undefined;
 
@@ -258,7 +260,7 @@
         raycaster.ray.origin.setFromMatrixPosition( controller.matrixWorld );
         raycaster.ray.direction.set( 0, 0, - 1 ).applyMatrix4( tempMatrix );
 
-        return raycaster.intersectObjects( group.children );
+        return raycaster.intersectObjects( group.children , true);
 
     }
 
