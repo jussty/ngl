@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>NGL ThreeJSViewer WebXR demonstration</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <link type="text/css" rel="stylesheet" href="http://threejs.org/files/main.css">
+    <style>
+        body {
+            background-color: #bfe3dd;
+            color: #000;
+        }
+
+        a {
+            color: #2983ff;
+        }
+    </style>
+</head>
+
+<body>
+
+<script src="../node_modules/three/build/three.js"></script>
+<script src="../node_modules/signals/dist/signals.js"></script>
+<script src="../node_modules/chroma-js/chroma.js"></script>
+<script>
+    // Define dependency globals using the names expected by NGL UMD module before loading it
+    var three = THREE;
+    var signalsWrapper = signals;
+</script>
+
+<script src="../build/js/ngl.umd.js"></script>
+
+<script type="module">
+    // Example is based on https://threejs.org/examples/webxr_vr_dragging.html
+
+    //import * as THREE from '../node_modules/three/build/three.module.js'
+
+    import { OrbitControls } from '../node_modules/three/examples/jsm/controls/OrbitControls.js';
+
+    //import { ThreeJSViewer, autoLoad } from '../build/js/ngl.esm.js'
+    const ThreeJSViewer = NGL.ThreeJSViewer;
+    const autoLoad = NGL.autoLoad;
+
+    import { VRButton } from '../node_modules/three/examples/jsm/webxr/VRButton.js';
+    import { XRControllerModelFactory } from '../node_modules/three/examples/jsm/webxr/XRControllerModelFactory.js';
+
+    var container;
+    var camera, scene, renderer;
+    var controller1, controller2;
+    var controllerGrip1, controllerGrip2;
+
+    var raycaster, intersected = [];
+    var tempMatrix = new THREE.Matrix4();
+
+    var controls, group;
+
+    var viewer;
+
+    init();
+    animate();
+
+    NGL.DatasourceRegistry.add("data", new NGL.StaticDatasource("../data/"))
+
+    var stage;
+    document.addEventListener("DOMContentLoaded", function () {
+        viewer = new ThreeJSViewer(renderer, camera, scene, group);
+        stage = new MicroStage(viewer)
+        //NGL.StageWidget(stage)
+
+        var load = NGL.getQuery("load")
+        if (load) stage.loadFile(load, {defaultRepresentation: true})
+
+        var script = NGL.getQuery("script")
+        if (script) stage.loadScript("./scripts/" + script + ".js")
+
+        /*var struc = NGL.getQuery("struc")
+        var traj = NGL.getQuery("traj")
+        if (struc) {
+            stage.loadFile(struc, {
+                defaultRepresentation: true
+            }).then(function(o) {
+                if (traj) o.addTrajectory(traj)
+            })
+        }*/
+    })
+
+    function init() {
+
+        container = document.createElement( 'div' );
+        document.body.appendChild( container );
+
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color( 0x000000 );
+
+        camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 10 );
+        camera.position.set( 0, 1.6, 3 );
+
+        controls = new OrbitControls( camera, container );
+        controls.target.set( 0, 1.6, 0 );
+        controls.update();
+
+        var geometry = new THREE.PlaneBufferGeometry( 4, 4 );
+        var material = new THREE.MeshStandardMaterial( {
+            color: 0xeeeeee,
+            roughness: 1.0,
+            metalness: 0.0
+        } );
+        var floor = new THREE.Mesh( geometry, material );
+        floor.rotation.x = - Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add( floor );
+
+        //scene.add( new THREE.HemisphereLight( 0x808080, 0x606060 ) );
+
+        // NGL shaders do not work with DirectionalLight
+        /*var light = new THREE.DirectionalLight( 0xffffff );
+        light.position.set( 0, 6, 0 );
+        light.castShadow = true;
+        light.shadow.camera.top = 2;
+        light.shadow.camera.bottom = - 2;
+        light.shadow.camera.right = 2;
+        light.shadow.camera.left = - 2;
+        light.shadow.mapSize.set( 4096, 4096 );
+        scene.add( light );*/
+
+        // Add lights similar to standard NGL viewer
+        var spotLight = new THREE.SpotLight(0xdddddd, 1.0);
+        var distVector = new THREE.Vector3().copy(camera.position).setLength(100);
+        spotLight.position.copy(camera.position).add(distVector);
+        scene.add(spotLight);
+
+        var ambientLight = new THREE.AmbientLight(0xdddddd, 0.2);
+        scene.add(ambientLight);
+        //
+
+        renderer = new THREE.WebGLRenderer( { antialias: true } );
+        renderer.setPixelRatio( window.devicePixelRatio );
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        renderer.outputEncoding = THREE.sRGBEncoding; // Better lighting conditions e.g. for controllers
+        //renderer.outputEncoding = THREE.LinearEncoding; // Looks like NGL default
+        renderer.shadowMap.enabled = true;
+        renderer.xr.enabled = true;
+        container.appendChild( renderer.domElement );
+
+        //
+
+        group = new THREE.Group();
+        group.scale.set(0.01, 0.01, 0.01);
+        group.position.set(0, 0.8, -1);
+        scene.add( group );
+
+        document.body.appendChild( VRButton.createButton( renderer ) );
+
+        // controllers
+
+        controller1 = renderer.xr.getController( 0 );
+        controller1.addEventListener( 'selectstart', onSelectStart );
+        controller1.addEventListener( 'selectend', onSelectEnd );
+        controller1.addEventListener( 'squeezestart', onSqueezeStart );
+        controller1.addEventListener( 'squeezeend', onSqueezeEnd );
+        scene.add( controller1 );
+
+        controller2 = renderer.xr.getController( 1 );
+        controller2.addEventListener( 'selectstart', onSelectStart );
+        controller2.addEventListener( 'selectend', onSelectEnd );
+        controller2.addEventListener( 'squeezestart', onSqueezeStart );
+        controller2.addEventListener( 'squeezeend', onSqueezeEnd );
+        scene.add( controller2 );
+
+        var controllerModelFactory = new XRControllerModelFactory();
+
+        controllerGrip1 = renderer.xr.getControllerGrip( 0 );
+        controllerGrip1.add( controllerModelFactory.createControllerModel( controllerGrip1 ) );
+        scene.add( controllerGrip1 );
+
+        controllerGrip2 = renderer.xr.getControllerGrip( 1 );
+        controllerGrip2.add( controllerModelFactory.createControllerModel( controllerGrip2 ) );
+        scene.add( controllerGrip2 );
+
+        //
+
+        var geometry = new THREE.BufferGeometry().setFromPoints( [ new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, 0, - 1 ) ] );
+
+        var line = new THREE.Line( geometry );
+        line.name = 'line';
+        line.scale.z = 5;
+
+        controller1.add( line.clone() );
+        controller2.add( line.clone() );
+
+        raycaster = new THREE.Raycaster();
+
+        //
+
+        window.addEventListener( 'resize', onWindowResize, false );
+
+        window.group = group; // make global for easier debugging
+        window.scene = scene; // make global for easier debugging
+        window.viewer = viewer; // make global for easier debugging
+
+    }
+
+    function onWindowResize() {
+
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+
+        renderer.setSize( window.innerWidth, window.innerHeight );
+
+    }
+
+    function onSelectStart( event ) {
+
+        var controller = event.target;
+        controller.attach( group );
+
+    }
+
+    function onSelectEnd( event ) {
+
+        scene.attach(group);
+
+    }
+
+    function onSqueezeStart( event ) {
+
+        var controller = event.target;
+
+        var intersections = getIntersections( controller );
+
+        if ( intersections.length > 0 ) {
+
+            var intersection = intersections[ 0 ];
+
+            var object = intersection.object;
+            controller.attach( object );
+
+            controller.userData.selected = object;
+
+        }
+
+    }
+
+    function onSqueezeEnd( event ) {
+
+        var controller = event.target;
+
+        if ( controller.userData.selected !== undefined ) {
+
+            var object = controller.userData.selected;
+            group.attach( object );
+
+            controller.userData.selected = undefined;
+
+        }
+
+
+    }
+
+    function getIntersections( controller ) {
+
+        tempMatrix.identity().extractRotation( controller.matrixWorld );
+
+        raycaster.ray.origin.setFromMatrixPosition( controller.matrixWorld );
+        raycaster.ray.direction.set( 0, 0, - 1 ).applyMatrix4( tempMatrix );
+
+        return raycaster.intersectObjects( group.children , true);
+
+    }
+
+    function intersectObjects( controller ) {
+
+        // Do not highlight when already selected
+
+        if ( controller.userData.selected !== undefined ) return;
+
+        var line = controller.getObjectByName( 'line' );
+        var intersections = getIntersections( controller );
+
+        if ( intersections.length > 0 ) {
+
+            var intersection = intersections[ 0 ];
+
+            var object = intersection.object;
+            //object.material.emissive.r = 1;
+            intersected.push( object );
+
+            line.scale.z = intersection.distance;
+
+        } else {
+
+            line.scale.z = 5;
+
+        }
+
+    }
+
+    function cleanIntersected() {
+
+        while ( intersected.length ) {
+
+            var object = intersected.pop();
+            //object.material.emissive.r = 0;
+
+        }
+
+    }
+
+    //
+
+    function animate() {
+
+        renderer.setAnimationLoop( render );
+
+    }
+
+    function render() {
+
+        cleanIntersected();
+
+        intersectObjects( controller1 );
+        intersectObjects( controller2 );
+
+        renderer.render( scene, camera );
+
+    }
+
+    function MicroStage(viewer) {
+
+        this.loadFile = function (path, params) {
+            return new Promise((resolve) => {
+                autoLoad(path).then(object => {
+                    const c = new MicroComponent(object);
+                    if (params.defaultRepresentation) c.addRepresentation();
+                    return resolve(c);
+                })
+            });
+        }
+
+        this.loadScript = function (path) {
+            console.log(("loading script '" + path + "'"));
+            return autoLoad(path).then((script) => {
+                script.run(this).then(() => {
+                    console.log(("finished script '" + path + "'"));
+                })
+            }, (error) => {
+                const errorMsg = "errored script '" + path + "' \"" + error + "\"";
+                console.log(errorMsg);
+                throw errorMsg; // throw so it can be catched
+            });
+        }
+
+        function MicroComponent(object) {
+            this.addRepresentation = function () {
+                viewer.addRepresentation(object, ...arguments)
+            }
+
+            this.autoView = function () {} // NOOP
+        }
+
+    }
+
+</script>
+
+</body>
+
+</html>
